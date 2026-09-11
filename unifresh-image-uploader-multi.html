@@ -1,0 +1,427 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Unifresh Product Image Uploader</title>
+<style>
+  :root {
+    --orange: #f6821f;
+    --dark: #1a1a1a;
+    --gray: #6b7280;
+    --light-bg: #f7f7f8;
+    --border: #e5e7eb;
+    --success: #16a34a;
+    --error: #dc2626;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    background: var(--light-bg);
+    color: var(--dark);
+    min-height: 100vh;
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+    padding: 40px 20px;
+  }
+  .card {
+    background: #fff;
+    border-radius: 16px;
+    box-shadow: 0 4px 24px rgba(0,0,0,0.06);
+    max-width: 680px;
+    width: 100%;
+    padding: 32px;
+  }
+  h1 { font-size: 20px; margin: 0 0 4px; }
+  .subtitle { color: var(--gray); font-size: 14px; margin: 0 0 24px; }
+  .dropzone {
+    border: 2px dashed var(--border);
+    border-radius: 12px;
+    padding: 40px 20px;
+    text-align: center;
+    cursor: pointer;
+    transition: border-color 0.2s, background 0.2s;
+  }
+  .dropzone.dragover { border-color: var(--orange); background: #fff7ed; }
+  .dropzone p { margin: 8px 0 0; color: var(--gray); font-size: 14px; }
+  .dropzone .icon { font-size: 32px; }
+  input[type="file"] { display: none; }
+
+  .grid {
+    margin-top: 20px;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+    gap: 12px;
+  }
+  .thumb {
+    position: relative;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    overflow: hidden;
+    background: var(--light-bg);
+    aspect-ratio: 1 / 1;
+  }
+  .thumb img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+  }
+  .thumb .remove-btn {
+    position: absolute;
+    top: 4px;
+    right: 4px;
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    background: rgba(0,0,0,0.6);
+    color: #fff;
+    border: none;
+    font-size: 13px;
+    line-height: 22px;
+    text-align: center;
+    cursor: pointer;
+    padding: 0;
+  }
+  .thumb .status-badge {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    padding: 4px 6px;
+    font-size: 11px;
+    text-align: center;
+    color: #fff;
+    background: rgba(0,0,0,0.55);
+  }
+  .thumb.uploading .status-badge { background: rgba(107,114,128,0.85); }
+  .thumb.success .status-badge { background: rgba(22,163,74,0.85); }
+  .thumb.error .status-badge { background: rgba(220,38,38,0.85); }
+
+  .actions {
+    display: flex;
+    gap: 10px;
+    margin-top: 20px;
+  }
+  button.upload-btn, button.clear-btn {
+    padding: 12px;
+    border: none;
+    border-radius: 8px;
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.2s;
+  }
+  button.upload-btn {
+    flex: 1;
+    background: var(--orange);
+    color: white;
+  }
+  button.upload-btn:hover { background: #e0700f; }
+  button.upload-btn:disabled { background: #d1d5db; cursor: not-allowed; }
+  button.clear-btn {
+    background: #fff;
+    color: var(--gray);
+    border: 1px solid var(--border);
+  }
+  button.clear-btn:hover { background: var(--light-bg); }
+
+  .progress-summary {
+    margin-top: 14px;
+    font-size: 13px;
+    color: var(--gray);
+    display: none;
+  }
+
+  .results {
+    margin-top: 20px;
+    display: none;
+  }
+  .results h2 {
+    font-size: 14px;
+    color: var(--gray);
+    margin: 0 0 10px;
+    font-weight: 600;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .results h2 button {
+    border: 1px solid var(--border);
+    background: #fff;
+    border-radius: 6px;
+    padding: 5px 10px;
+    font-size: 12px;
+    cursor: pointer;
+    font-weight: 600;
+    color: var(--dark);
+  }
+  .results h2 button:hover { background: var(--light-bg); }
+  .result-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 0;
+    border-bottom: 1px solid var(--light-bg);
+  }
+  .result-row img {
+    width: 36px;
+    height: 36px;
+    object-fit: cover;
+    border-radius: 6px;
+    border: 1px solid var(--border);
+    flex-shrink: 0;
+  }
+  .result-row input {
+    flex: 1;
+    padding: 8px 10px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    font-size: 12px;
+    color: var(--dark);
+    background: var(--light-bg);
+    min-width: 0;
+  }
+  .result-row button {
+    padding: 8px 12px;
+    border: 1px solid var(--border);
+    background: #fff;
+    border-radius: 6px;
+    font-size: 12px;
+    cursor: pointer;
+    white-space: nowrap;
+  }
+  .result-row button:hover { background: var(--light-bg); }
+  .spinner {
+    display: inline-block;
+    width: 12px;
+    height: 12px;
+    border: 2px solid rgba(255,255,255,0.4);
+    border-top-color: #fff;
+    border-radius: 50%;
+    animation: spin 0.7s linear infinite;
+    vertical-align: middle;
+    margin-right: 5px;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+</style>
+</head>
+<body>
+
+<div class="card">
+  <h1>Unifresh Product Image Uploader</h1>
+  <p class="subtitle">Select or drop multiple images. Upload them all at once and get a link for each.</p>
+
+  <div class="dropzone" id="dropzone">
+    <div class="icon">📷</div>
+    <p><strong>Click to select</strong> or drag & drop images here (multiple allowed)</p>
+    <input type="file" id="fileInput" accept="image/*" multiple />
+  </div>
+
+  <div class="grid" id="grid"></div>
+
+  <div class="actions" id="actions" style="display:none;">
+    <button class="upload-btn" id="uploadBtn">Upload All Images</button>
+    <button class="clear-btn" id="clearBtn">Clear</button>
+  </div>
+
+  <div class="progress-summary" id="progressSummary"></div>
+
+  <div class="results" id="results">
+    <h2>
+      <span>Shareable Links</span>
+      <button id="copyAllBtn">Copy All Links</button>
+    </h2>
+    <div id="resultsList"></div>
+  </div>
+</div>
+
+<script>
+  const WORKER_URL = "https://image-uploader.digitalmarketing-unifresh.workers.dev";
+  const UPLOAD_KEY = "Unifresh@001";
+
+  const dropzone = document.getElementById('dropzone');
+  const fileInput = document.getElementById('fileInput');
+  const grid = document.getElementById('grid');
+  const actions = document.getElementById('actions');
+  const uploadBtn = document.getElementById('uploadBtn');
+  const clearBtn = document.getElementById('clearBtn');
+  const progressSummary = document.getElementById('progressSummary');
+  const results = document.getElementById('results');
+  const resultsList = document.getElementById('resultsList');
+  const copyAllBtn = document.getElementById('copyAllBtn');
+
+  // queue items: { id, file, previewUrl, status: 'pending'|'uploading'|'success'|'error', url, thumbEl }
+  let queue = [];
+  let idCounter = 0;
+
+  dropzone.addEventListener('click', () => fileInput.click());
+
+  dropzone.addEventListener('dragover', (e) => {
+    e.preventDefault();
+    dropzone.classList.add('dragover');
+  });
+  dropzone.addEventListener('dragleave', () => dropzone.classList.remove('dragover'));
+  dropzone.addEventListener('drop', (e) => {
+    e.preventDefault();
+    dropzone.classList.remove('dragover');
+    if (e.dataTransfer.files.length) addFiles(e.dataTransfer.files);
+  });
+
+  fileInput.addEventListener('change', (e) => {
+    if (e.target.files.length) addFiles(e.target.files);
+    fileInput.value = '';
+  });
+
+  function addFiles(fileList) {
+    const files = Array.from(fileList).filter(f => f.type.startsWith('image/'));
+    files.forEach(file => {
+      const id = 'f' + (idCounter++);
+      const previewUrl = URL.createObjectURL(file);
+      const item = { id, file, previewUrl, status: 'pending', url: null };
+      queue.push(item);
+      renderThumb(item);
+    });
+    updateActionsVisibility();
+  }
+
+  function renderThumb(item) {
+    const thumb = document.createElement('div');
+    thumb.className = 'thumb';
+    thumb.id = 'thumb-' + item.id;
+    thumb.innerHTML = `
+      <img src="${item.previewUrl}" alt="${item.file.name}" />
+      <button class="remove-btn" data-id="${item.id}" title="Remove">✕</button>
+    `;
+    grid.appendChild(thumb);
+    item.thumbEl = thumb;
+
+    thumb.querySelector('.remove-btn').addEventListener('click', () => removeItem(item.id));
+  }
+
+  function removeItem(id) {
+    queue = queue.filter(i => i.id !== id);
+    const el = document.getElementById('thumb-' + id);
+    if (el) el.remove();
+    updateActionsVisibility();
+  }
+
+  function updateActionsVisibility() {
+    actions.style.display = queue.length > 0 ? 'flex' : 'none';
+    if (queue.length === 0) {
+      progressSummary.style.display = 'none';
+      results.style.display = 'none';
+      resultsList.innerHTML = '';
+    }
+  }
+
+  clearBtn.addEventListener('click', () => {
+    queue.forEach(i => URL.revokeObjectURL(i.previewUrl));
+    queue = [];
+    grid.innerHTML = '';
+    updateActionsVisibility();
+  });
+
+  function setThumbStatus(item, status, label) {
+    item.status = status;
+    item.thumbEl.className = 'thumb ' + status;
+    let badge = item.thumbEl.querySelector('.status-badge');
+    if (!badge) {
+      badge = document.createElement('div');
+      badge.className = 'status-badge';
+      item.thumbEl.appendChild(badge);
+    }
+    badge.innerHTML = label;
+  }
+
+  uploadBtn.addEventListener('click', async () => {
+    const pending = queue.filter(i => i.status === 'pending' || i.status === 'error');
+    if (pending.length === 0) return;
+
+    uploadBtn.disabled = true;
+    uploadBtn.textContent = 'Uploading...';
+    progressSummary.style.display = 'block';
+
+    let done = 0;
+    const total = pending.length;
+    updateProgress(done, total);
+
+    // Upload sequentially to keep it simple and avoid overwhelming the Worker
+    for (const item of pending) {
+      setThumbStatus(item, 'uploading', '<span class="spinner"></span>Uploading');
+      try {
+        const formData = new FormData();
+        formData.append('file', item.file);
+
+        const res = await fetch(WORKER_URL, {
+          method: 'POST',
+          headers: { 'X-Upload-Key': UPLOAD_KEY },
+          body: formData,
+        });
+
+        if (!res.ok) {
+          const errText = await res.text();
+          throw new Error(errText || ('Status ' + res.status));
+        }
+
+        const data = await res.json();
+        item.url = data.url;
+        setThumbStatus(item, 'success', 'Done');
+        addResultRow(item);
+
+      } catch (err) {
+        setThumbStatus(item, 'error', 'Failed');
+        console.error('Upload failed for', item.file.name, err);
+      }
+
+      done++;
+      updateProgress(done, total);
+    }
+
+    uploadBtn.disabled = false;
+    uploadBtn.textContent = 'Upload All Images';
+
+    const failedCount = queue.filter(i => i.status === 'error').length;
+    if (failedCount > 0) {
+      progressSummary.innerHTML = `${total - failedCount} of ${total} uploaded successfully. ${failedCount} failed — click "Upload All Images" again to retry failed ones.`;
+    } else {
+      progressSummary.textContent = `All ${total} image(s) uploaded successfully.`;
+    }
+  });
+
+  function updateProgress(done, total) {
+    progressSummary.textContent = `Uploading ${done} of ${total}...`;
+  }
+
+  function addResultRow(item) {
+    if (results.style.display !== 'block') {
+      results.style.display = 'block';
+    }
+    const row = document.createElement('div');
+    row.className = 'result-row';
+    row.innerHTML = `
+      <img src="${item.previewUrl}" alt="thumb" />
+      <input type="text" readonly value="${item.url}" />
+      <button class="copy-one">Copy</button>
+    `;
+    row.querySelector('.copy-one').addEventListener('click', (e) => {
+      navigator.clipboard.writeText(item.url);
+      e.target.textContent = 'Copied!';
+      setTimeout(() => { e.target.textContent = 'Copy'; }, 1200);
+    });
+    resultsList.appendChild(row);
+  }
+
+  copyAllBtn.addEventListener('click', () => {
+    const urls = queue.filter(i => i.url).map(i => i.url).join('\n');
+    if (!urls) return;
+    navigator.clipboard.writeText(urls);
+    copyAllBtn.textContent = 'Copied!';
+    setTimeout(() => { copyAllBtn.textContent = 'Copy All Links'; }, 1500);
+  });
+</script>
+
+</body>
+</html>
